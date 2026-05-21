@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:15
+    container_name: tool_issuance_db
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+
+  api:
+    build:
+        context: .
+        dockerfile: Dockerfile
+    container_name: tool_issuance_api
+    depends_on:
+      - db
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
+
+  bot:
+    build:
+        context: .
+        dockerfile: Dockerfile
+    container_name: tool_issuance_bot
+    depends_on:
+      - db
+    env_file:
+      - .env
+    command: python bot/main.py
