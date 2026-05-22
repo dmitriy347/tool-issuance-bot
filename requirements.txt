@@ -1,9 +1,9 @@
 aiogram==3.28.2
+asyncpg
 fastapi
 uvicorn
 sqlalchemy
 alembic
-psycopg2-binary
 openpyxl
 python-docx
 pytest
