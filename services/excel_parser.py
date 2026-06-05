@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, date
+
 from openpyxl import load_workbook
 
 
@@ -32,3 +33,76 @@ def parse_employee_directory(file_path: str) -> list[dict]:
     finally:
         wb.close()
     return employees
+
+
+
+
+
+
+
+def employee_name(value: str) -> bool:
+    """
+    Проверяет, является ли значение ФИО сотрудника.
+    Если строка содержит 3 слова, каждое из которых начинается с заглавной буквы, то это имя сотрудника.
+    """
+    parts = value.split()
+    result = len(parts) == 3 and all(p and p[0].isupper() for p in parts)
+    return result
+
+
+def inventory_code(value: str) -> bool:
+    """
+    Проверяет, является ли значение кодом инвентаря.
+    """
+    return value.startswith("ЦБ") or value.startswith("БШ")
+
+
+def parse_inventory(file_path: str, period: date) -> list[dict]:
+    """Парсит Excel-файл с данными инвентаря и возвращает список словарей с данными каждого предмета."""
+    try:
+        wb = load_workbook(filename=file_path, read_only=True)
+        ws = wb.active
+
+        current_employee = None  # Храним текущего сотрудника
+        current_tool_code = None  # Храним текущий код инструмента
+        current_tool_name = None  # Храним текущее название инструмента
+        price = None  # Храним цену текущего инструмента
+        inventories = []
+
+        for row in ws.iter_rows(values_only=True):
+            if row[0] is None or row[1] == "Кол.":
+                if current_tool_code and price is not None:
+                    quantity = row[4]
+                    inventories.append({
+                        "employee_name": current_employee,
+                        "tool_name": current_tool_name,
+                        "tool_code": current_tool_code,
+                        "quantity": quantity,
+                        "price": price,
+                        "period": period,
+                    })
+                    current_tool_code = None  # Сбрасываем
+                    price = None
+                continue
+
+            # Убираем лишние пробелы и заменяем неразрывные пробелы на обычные, чтобы данные были чистыми
+            value = str(row[0]).strip().replace("\xa0", " ")
+
+            if value == "МЦ.04":
+                continue
+
+            # Если встречаем ФИО сотрудника
+            elif employee_name(value):
+                current_employee = value
+
+            # Если встречаем код инвентаря
+            elif inventory_code(value):
+                current_tool_code = value
+                price = row[4]
+
+            # Если есть ФИО сотрудника, то следующая строка - это название инструмента
+            elif current_employee:
+                current_tool_name = value
+    finally:
+        wb.close()
+    return inventories
