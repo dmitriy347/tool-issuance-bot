@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
-from api.crud.employee import get_all, create, delete_all
+from api.crud.employee import get_all, create, delete_all, get_by_name_fragment
 from api.schemas.employee import EmployeeResponse, EmployeeCreate
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,3 +22,11 @@ async def create_employee(employee_data: EmployeeCreate, db: AsyncSession = Depe
 async def delete_employees(db: AsyncSession = Depends(get_db)):
     """Удаляет всех сотрудников."""
     return await delete_all(db)
+
+@router.get("/search", response_model=EmployeeResponse)
+async def search_employee(employee_name: str, db: AsyncSession = Depends(get_db)):
+    """Возвращает сотрудника по имени."""
+    employee = await get_by_name_fragment(db, employee_name)
+    if employee is None:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    return employee
