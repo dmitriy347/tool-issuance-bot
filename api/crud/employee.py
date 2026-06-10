@@ -1,4 +1,6 @@
 from datetime import date
+from unittest import result
+
 from sqlalchemy import select, delete
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,3 +38,10 @@ async def delete_all(session: AsyncSession) -> None:
     """Удаление всех сотрудников."""
     await session.execute(delete(Employee))
     await session.commit()
+
+async def get_by_name_fragment(session: AsyncSession, fragment: str) -> Employee | None:
+    """Возвращает полное ФИО сотрудника по фрагменту имени или None если не найден."""
+    result = await session.execute(
+        select(Employee).where(Employee.full_name.ilike(f"{fragment}%"))
+    )
+    return result.scalar_one_or_none()
