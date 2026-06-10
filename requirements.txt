@@ -7,4 +7,6 @@ alembic
 openpyxl
 python-docx
 pytest
+pytest-asyncio
+python-dotenv
 httpx
