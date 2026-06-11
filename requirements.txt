@@ -10,4 +10,4 @@ pytest
 pytest-asyncio
 python-dotenv
 httpx
-python-docx-template
+docxtpl
