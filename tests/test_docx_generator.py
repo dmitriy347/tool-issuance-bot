@@ -53,7 +53,7 @@ def test_render(single_employee):
     Проверяет, что результат - это байты, которые можно открыть как документ.
     """
     context = {**single_employee, "items": []}
-    result = _render("templates/single_employee.docx", context)
+    result = _render("templates/single_employee.example.docx", context)
     doc = Document(BytesIO(result))
     # Проверяем, что документ успешно открыт
     assert doc is not None
