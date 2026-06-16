@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 
-from bot.states import UpdateDirectory, NewPeriod
+from bot.states import UpdateDirectory, UpdateInventory
 
 router = Router()
 
@@ -16,11 +16,11 @@ async def cmd_update_directory(message: Message, state: FSMContext):
     await state.set_state(UpdateDirectory.waiting_for_file)  # Переводим состояние в ожидание загрузки файла
     await message.answer("Отправьте Excel-файл справочника")
 
-@router.message(Command("new_period"))
+@router.message(Command("update_inventory"))
 async def cmd_new_period(message: Message, state: FSMContext):
     """
-    Обработчик команды /new_period.
-    Запускает процесс создания нового месяца.
+    Обработчик команды /update_inventory.
+    Запускает процесс обновления инвентаря.
     """
-    await state.set_state(NewPeriod.waiting_for_period)  # Переводим состояние в ожидание ввода периода
-    await message.answer("Введите период в формате ММ.ГГГГ")
+    await state.set_state(UpdateInventory.waiting_for_file)  # Переводим состояние в ожидание загрузки файла
+    await message.answer("Отправьте Excel-файл инвентаря для нового месяца")
