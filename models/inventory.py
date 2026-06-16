@@ -1,4 +1,3 @@
-from datetime import date
 from decimal import Decimal
 
 from sqlalchemy import String, Integer, Date, Numeric
@@ -16,4 +15,3 @@ class Inventory(Base):
     tool_code: Mapped[str] = mapped_column(String(100))
     quantity: Mapped[int] = mapped_column(Integer)
     price: Mapped[Decimal] = mapped_column(Numeric)
-    period: Mapped[date] = mapped_column(Date)

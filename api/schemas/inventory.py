@@ -1,4 +1,3 @@
-from datetime import date
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict
@@ -11,7 +10,6 @@ class InventoryBase(BaseModel):
     tool_code: str
     quantity: int
     price: Decimal
-    period: date
 
 
 class InventoryCreate(InventoryBase):

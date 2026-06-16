@@ -57,7 +57,7 @@ def inventory_code(value: str) -> bool:
     return value.startswith("ЦБ") or value.startswith("БШ")
 
 
-def parse_inventory(file_path: str, period: date) -> list[dict]:
+def parse_inventory(file_path: str | bytes) -> list[dict]:
     """Парсит Excel-файл с данными инвентаря и возвращает список словарей с данными каждого предмета."""
     try:
         wb = load_workbook(filename=file_path, read_only=True)
@@ -79,7 +79,6 @@ def parse_inventory(file_path: str, period: date) -> list[dict]:
                         "tool_code": current_tool_code,
                         "quantity": quantity,
                         "price": price,
-                        "period": period,
                     })
                     current_tool_code = None  # Сбрасываем
                     price = None
