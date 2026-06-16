@@ -1,12 +1,16 @@
 from datetime import datetime, date
+from io import BytesIO
 
 from openpyxl import load_workbook
 
 
-def parse_employee_directory(file_path: str) -> list[dict]:
+def parse_employee_directory(file_path: str | bytes) -> list[dict]:
     """Парсит Excel-файл с данными сотрудников и возвращает список словарей с данными каждого сотрудника."""
-    # Загружаем Excel-файл в режиме "только для чтения", для экономии памяти (при работе с большими файлами)
+    # Загружаем Excel-файл
     try:
+        # Если file_path - это байты (например, из загруженного файла), то оборачиваем его в BytesIO, чтобы load_workbook мог его прочитать
+        if isinstance(file_path, bytes):
+            file_path = BytesIO(file_path)
         wb = load_workbook(filename=file_path, read_only=True)
         ws = wb.active  # Получаем активный лист
 
@@ -36,10 +40,6 @@ def parse_employee_directory(file_path: str) -> list[dict]:
 
 
 
-
-
-
-
 def employee_name(value: str) -> bool:
     """
     Проверяет, является ли значение ФИО сотрудника.
@@ -60,6 +60,8 @@ def inventory_code(value: str) -> bool:
 def parse_inventory(file_path: str | bytes) -> list[dict]:
     """Парсит Excel-файл с данными инвентаря и возвращает список словарей с данными каждого предмета."""
     try:
+        if isinstance(file_path, bytes):
+            file_path = BytesIO(file_path)
         wb = load_workbook(filename=file_path, read_only=True)
         ws = wb.active
 

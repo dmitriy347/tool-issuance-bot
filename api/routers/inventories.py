@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, UploadFile, File
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.crud.inventory import get_by_employee_name, create, delete_all
 from api.schemas.inventory import InventoryResponse, InventoryCreate
 from database import get_db
+from services.excel_parser import parse_inventory
 
 router = APIRouter(prefix="/inventories", tags=["inventories"])
 
@@ -22,3 +23,17 @@ async def create_inventory(inventory_data: InventoryCreate, db: AsyncSession = D
 async def delete_inventories(db: AsyncSession = Depends(get_db)):
     """Удаляет весь инвентарь."""
     return await delete_all(db)
+
+@router.post("/upload")
+async def upload_inventories(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
+    """
+    Загружает Excel-файл целиком, парсит и сохраняет инвентарь БД.
+    Перед загрузкой нового файла удаляет все существующие записи об инвентаре.
+    Возвращает количество загруженных записей инвентаря.
+    """
+    await delete_all(db)
+    content = await file.read()
+    inventories = parse_inventory(content)
+    for inventory in inventories:
+        await create(db, **inventory)
+    return {"loaded_inventory": len(inventories)}

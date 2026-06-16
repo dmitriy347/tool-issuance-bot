@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 
 from api.crud.employee import get_all, create, delete_all, get_by_name_fragment
 from api.schemas.employee import EmployeeResponse, EmployeeCreate
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
+from services.excel_parser import parse_employee_directory
 
 router = APIRouter(prefix="/employees", tags=["employees"])
 
@@ -30,3 +31,20 @@ async def search_employee(employee_name: str, db: AsyncSession = Depends(get_db)
     if employee is None:
         raise HTTPException(status_code=404, detail="Employee not found")
     return employee
+
+@router.post("/upload")
+async def upload_employees(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
+    """
+    Загружает Excel-файл целиком, парсит и сохраняет сотрудников БД.
+    Перед загрузкой нового файла удаляет все существующие записи о сотрудниках.
+    Возвращает количество загруженных сотрудников.
+    """
+    # Удаляем все существующие записи о сотрудниках
+    await delete_all(db)
+    # Читаем байты загруженного файла
+    content = await file.read()
+    # Парсим Excel-файл и получаем список сотрудников
+    employees = parse_employee_directory(content)
+    for employee in employees:
+        await create(db, **employee)
+    return {"loaded_employees": len(employees)}
