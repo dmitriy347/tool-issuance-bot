@@ -22,7 +22,7 @@ async def handle_directory_file(message: Message, bot: Bot, state: FSMContext):
             file = await bot.get_file(message.document.file_id)
             file_bytes = await bot.download_file(file.file_path)
             response = await client.post(
-                f"{api_url}/api/employees/upload/",
+                f"{api_url}/api/employees/upload",
                 files={"file": (message.document.file_name, file_bytes, "application/octet-stream")},
             )
             response.raise_for_status()
@@ -45,7 +45,7 @@ async def handle_new_file_inventory(message: Message, state: FSMContext, bot: Bo
             file = await bot.get_file(message.document.file_id)
             file_bytes = await bot.download_file(file.file_path)
             response = await client.post(
-                f"{api_url}/api/inventories/upload/",
+                f"{api_url}/api/inventories/upload",
                 files={"file": (message.document.file_name, file_bytes, "application/octet-stream")},
             )
             response.raise_for_status()
