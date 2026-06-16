@@ -6,7 +6,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from bot.states import UpdateDirectory, UpdateInventory
-from services.excel_parser import parse_employee_directory, parse_inventory
 
 router = Router()
 
@@ -16,26 +15,20 @@ api_url = getenv("API_URL")
 async def handle_directory_file(message: Message, bot: Bot, state: FSMContext):
     """
     Обработчик загрузки файла справочника.
-    Скачивает файл, парсит его, возвращает количество сотрудников в справочнике и очищает состояние.
+    Скачивает файл, отправляет его в API для обработки и очищает состояние.
     """
     async with httpx.AsyncClient() as client:
         try:
-            # Перед загрузкой нового файла удаляем все существующие записи о сотрудниках через API
-            response = await client.delete(f"{api_url}/api/employees/")
-            response.raise_for_status()
-
             file = await bot.get_file(message.document.file_id)
-            await bot.download_file(file.file_path, destination="tmp/directory.xlsx")
-            result = parse_employee_directory("tmp/directory.xlsx")  # Парсим файл справочника
+            file_bytes = await bot.download_file(file.file_path)
+            response = await client.post(
+                f"{api_url}/api/employees/upload/",
+                files={"file": (message.document.file_name, file_bytes, "application/octet-stream")},
+            )
+            response.raise_for_status()
+            data = response.json()
+            await message.answer(f"Загружено сотрудников: {data['loaded_employees']}")
 
-            # Отправляем каждого сотрудника в API
-            for employee in result:
-                # Преобразуем дату в строку в формате ISO, чтобы её можно было отправить в JSON
-                employee["contract_date"] = employee["contract_date"].isoformat()
-                response = await client.post(f"{api_url}/api/employees/", json=employee)
-                response.raise_for_status()
-
-            await message.answer(f"Загружено сотрудников: {len(result)}")
         except Exception as e:
             await message.answer(f"Произошла ошибка при обработке файла: {str(e)}")
         finally:
@@ -45,24 +38,20 @@ async def handle_directory_file(message: Message, bot: Bot, state: FSMContext):
 async def handle_new_file_inventory(message: Message, state: FSMContext, bot: Bot):
     """
     Обработчик загрузки файла инвентаря для нового месяца.
-    Скачивает файл, парсит его, возвращает количество записей инвентаря и очищает состояние.
+    Скачивает файл, отправляет его в API для обработки и очищает состояние.
     """
     async with httpx.AsyncClient() as client:
         try:
-            # Перед загрузкой нового файла удаляем все существующие записи инвентаря через API
-            response = await client.delete(f"{api_url}/api/inventories/")
-            response.raise_for_status()
-
             file = await bot.get_file(message.document.file_id)
-            await bot.download_file(file.file_path, destination="tmp/inventory.xlsx")
-            result = parse_inventory("tmp/inventory.xlsx")
+            file_bytes = await bot.download_file(file.file_path)
+            response = await client.post(
+                f"{api_url}/api/inventories/upload/",
+                files={"file": (message.document.file_name, file_bytes, "application/octet-stream")},
+            )
+            response.raise_for_status()
+            data = response.json()
+            await message.answer(f"Загружено позиций инвентаря: {data['loaded_inventory']}")
 
-            # Отправляем каждую запись инвентаря в API
-            for inventory in result:
-                response = await client.post(f"{api_url}/api/inventories/", json=inventory)
-                response.raise_for_status()
-
-            await message.answer(f"Загружено записей: {len(result)}")
         except Exception as e:
             await message.answer(f"Произошла ошибка при обработке файла: {str(e)}")
         finally:
