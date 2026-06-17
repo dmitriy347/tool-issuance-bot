@@ -6,3 +6,4 @@ venv/
 templates/single_employee.docx
 templates/two_employees.docx
 templates/three_employees.docx
+.DS_Store
