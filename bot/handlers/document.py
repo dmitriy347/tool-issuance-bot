@@ -3,9 +3,9 @@ from os import getenv
 import httpx
 from aiogram import Router, Bot
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, BufferedInputFile
 
-from bot.states import UpdateDirectory, UpdateInventory
+from bot.states import UpdateDirectory, UpdateInventory, GenerateDocument
 
 router = Router()
 
@@ -51,6 +51,33 @@ async def handle_new_file_inventory(message: Message, state: FSMContext, bot: Bo
             response.raise_for_status()
             data = response.json()
             await message.answer(f"Загружено позиций инвентаря: {data['loaded_inventory']}")
+
+        except Exception as e:
+            await message.answer(f"Произошла ошибка при обработке файла: {str(e)}")
+        finally:
+            await state.clear()
+
+@router.message(GenerateDocument.waiting_for_screen)
+async def handle_new_file_generate(message: Message, state: FSMContext, bot: Bot):
+    """
+    Обработчик загрузки скриншота для генерации документа.
+    Скачивает файл, отправляет его в API для обработки и очищает состояние.
+    """
+    async with httpx.AsyncClient() as client:
+        try:
+            # Получаем последний (с самым большим разрешением) файл из списка фотографий
+            file = await bot.get_file(message.photo[-1].file_id)
+            file_bytes = await bot.download_file(file.file_path)
+            response = await client.post(
+                f"{api_url}/api/documents/generate",
+                files={"file": ("screen.jpg", file_bytes, "application/octet-stream")},
+            )
+            response.raise_for_status()
+            # Получаем байты сгенерированного DOCX-файла из ответа API
+            docx_bytes = response.content
+            await message.answer_document(
+                BufferedInputFile(docx_bytes, filename="document.docx")
+            )
 
         except Exception as e:
             await message.answer(f"Произошла ошибка при обработке файла: {str(e)}")
