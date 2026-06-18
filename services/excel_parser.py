@@ -1,17 +1,22 @@
-from datetime import datetime, date
+from datetime import datetime
 from io import BytesIO
+from zipfile import BadZipFile
 
 from openpyxl import load_workbook
+from openpyxl.utils.exceptions import InvalidFileException
 
 
 def parse_employee_directory(file_path: str | bytes) -> list[dict]:
     """Парсит Excel-файл с данными сотрудников и возвращает список словарей с данными каждого сотрудника."""
-    # Загружаем Excel-файл
+    # Если file_path - это байты (например, из загруженного файла), то оборачиваем его в BytesIO, чтобы load_workbook мог его прочитать
+    if isinstance(file_path, bytes):
+        file_path = BytesIO(file_path)
     try:
-        # Если file_path - это байты (например, из загруженного файла), то оборачиваем его в BytesIO, чтобы load_workbook мог его прочитать
-        if isinstance(file_path, bytes):
-            file_path = BytesIO(file_path)
         wb = load_workbook(filename=file_path, read_only=True)
+    # Если файл повреждён или не является Excel-файлом, выбрасываем ValueError
+    except (InvalidFileException, BadZipFile):
+        raise ValueError("Файл повреждён или не является Excel-файлом")
+    try:
         ws = wb.active  # Получаем активный лист
 
         employees = []
@@ -36,6 +41,8 @@ def parse_employee_directory(file_path: str | bytes) -> list[dict]:
                     break
     finally:
         wb.close()
+    if not employees:
+        raise ValueError("В файле не найдены необходимые данные. Проверьте, что загружен правильный файл.")
     return employees
 
 
@@ -59,10 +66,14 @@ def inventory_code(value: str) -> bool:
 
 def parse_inventory(file_path: str | bytes) -> list[dict]:
     """Парсит Excel-файл с данными инвентаря и возвращает список словарей с данными каждого предмета."""
+    if isinstance(file_path, bytes):
+        file_path = BytesIO(file_path)
     try:
-        if isinstance(file_path, bytes):
-            file_path = BytesIO(file_path)
         wb = load_workbook(filename=file_path, read_only=True)
+    # Если файл повреждён или не является Excel-файлом, выбрасываем ValueError
+    except (InvalidFileException, BadZipFile):
+        raise ValueError("Файл повреждён или не является Excel-файлом")
+    try:
         ws = wb.active
 
         current_employee = None  # Храним текущего сотрудника
@@ -106,4 +117,6 @@ def parse_inventory(file_path: str | bytes) -> list[dict]:
                 current_tool_name = value
     finally:
         wb.close()
+    if not inventories:
+        raise ValueError("В файле не найдены необходимые данные. Проверьте, что загружен правильный файл.")
     return inventories
