@@ -11,12 +11,27 @@ router = Router()
 
 api_url = getenv("API_URL")
 
+def extract_error_message(e: Exception):
+    """
+    Извлекает текст ошибки из исключения.
+    Если ошибка связана с HTTP-запросом, достает текст ошибки из ответа сервера, иначе - общее сообщение об ошибке.
+    """
+    if isinstance(e, httpx.HTTPStatusError):
+        return e.response.json().get("detail", e.response.text)
+    return str(e)
+
+
 @router.message(UpdateDirectory.waiting_for_file)
 async def handle_directory_file(message: Message, bot: Bot, state: FSMContext):
     """
     Обработчик загрузки файла справочника.
     Скачивает файл, отправляет его в API для обработки и очищает состояние.
     """
+    if message.document is None:
+        await message.answer("Пожалуйста, отправьте файл как документ, не как фото")
+        await state.clear()
+        return
+
     async with httpx.AsyncClient() as client:
         try:
             file = await bot.get_file(message.document.file_id)
@@ -29,8 +44,10 @@ async def handle_directory_file(message: Message, bot: Bot, state: FSMContext):
             data = response.json()
             await message.answer(f"Загружено сотрудников: {data['loaded_employees']}")
 
+        # Если ошибка связана с HTTP-запросом, достаем и выводим текст ошибки из ответа сервера, иначе - общее сообщение об ошибке
         except Exception as e:
-            await message.answer(f"Произошла ошибка при обработке файла: {str(e)}")
+            await message.answer(f"Ошибка: {extract_error_message(e)}")
+
         finally:
             await state.clear()  # Очищаем состояние после завершения процесса
 
@@ -40,6 +57,11 @@ async def handle_new_file_inventory(message: Message, state: FSMContext, bot: Bo
     Обработчик загрузки файла инвентаря для нового месяца.
     Скачивает файл, отправляет его в API для обработки и очищает состояние.
     """
+    if message.document is None:
+        await message.answer("Пожалуйста, отправьте файл как документ, не как фото")
+        await state.clear()
+        return
+
     async with httpx.AsyncClient() as client:
         try:
             file = await bot.get_file(message.document.file_id)
@@ -52,8 +74,10 @@ async def handle_new_file_inventory(message: Message, state: FSMContext, bot: Bo
             data = response.json()
             await message.answer(f"Загружено позиций инвентаря: {data['loaded_inventory']}")
 
+        # Если ошибка связана с HTTP-запросом, достаем и выводим текст ошибки из ответа сервера, иначе - общее сообщение об ошибке
         except Exception as e:
-            await message.answer(f"Произошла ошибка при обработке файла: {str(e)}")
+            await message.answer(f"Ошибка: {extract_error_message(e)}")
+
         finally:
             await state.clear()
 
@@ -79,7 +103,9 @@ async def handle_new_file_generate(message: Message, state: FSMContext, bot: Bot
                 BufferedInputFile(docx_bytes, filename="document.docx")
             )
 
+        # Если ошибка связана с HTTP-запросом, выводим текст ответа сервера, иначе - общее сообщение об ошибке
         except Exception as e:
-            await message.answer(f"Произошла ошибка при обработке файла: {str(e)}")
+            await message.answer(f"Ошибка: {extract_error_message(e)}")
+
         finally:
             await state.clear()
