@@ -45,7 +45,10 @@ def _build_items_context(items: list[dict]) -> list[dict]:
 
 def _render(template_path: Path, context: dict) -> bytes:
     """Рендерит шаблон с контекстом и возвращает байты"""
-    template = DocxTemplate(template_path)  # Загружаем шаблон
+    try:
+        template = DocxTemplate(template_path)  # Загружаем шаблон
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Шаблон для генерации документа не найден: {template_path}")
     template.render(context)  # Заполняем шаблон данными из БД
     buffer = BytesIO()  # Создаем буфер для сохранения сгенерированного документа
     template.save(buffer)  # Сохраняем сгенерированный документ в буфер
