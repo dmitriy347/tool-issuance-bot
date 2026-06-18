@@ -39,12 +39,17 @@ async def upload_employees(file: UploadFile = File(...), db: AsyncSession = Depe
     Перед загрузкой нового файла удаляет все существующие записи о сотрудниках.
     Возвращает количество загруженных сотрудников.
     """
-    # Удаляем все существующие записи о сотрудниках
-    await delete_all(db)
     # Читаем байты загруженного файла
     content = await file.read()
     # Парсим Excel-файл и получаем список сотрудников
-    employees = parse_employee_directory(content)
+    try:
+        employees = parse_employee_directory(content)
+    # Если файл повреждён или не является Excel-файлом, parse_employee_directory выбросит ValueError
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Удаляем все существующие записи о сотрудниках
+    await delete_all(db)
     for employee in employees:
         await create(db, **employee)
     return {"loaded_employees": len(employees)}

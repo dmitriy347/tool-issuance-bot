@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,9 +31,15 @@ async def upload_inventories(file: UploadFile = File(...), db: AsyncSession = De
     Перед загрузкой нового файла удаляет все существующие записи об инвентаре.
     Возвращает количество загруженных записей инвентаря.
     """
-    await delete_all(db)
     content = await file.read()
-    inventories = parse_inventory(content)
+    try:
+        inventories = parse_inventory(content)
+    # Если файл повреждён или не является Excel-файлом, parse_employee_directory выбросит ValueError
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Удаляем все существующие записи об инвентаре
+    await delete_all(db)
     for inventory in inventories:
         await create(db, **inventory)
     return {"loaded_inventory": len(inventories)}
