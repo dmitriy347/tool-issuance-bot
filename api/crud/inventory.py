@@ -1,4 +1,3 @@
-from datetime import date
 from decimal import Decimal
 
 from sqlalchemy import select, delete
@@ -7,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.inventory import Inventory
 
 
-async def create(session:AsyncSession, employee_name: str, tool_name: str, tool_code: str, quantity: int, price: Decimal, period: date) -> Inventory:
+async def create(session:AsyncSession, employee_name: str, tool_name: str, tool_code: str, quantity: int, price: Decimal) -> Inventory:
     """Создает новый инвентарь в БД и возвращает его с заполненным id и данными."""
     inventory = Inventory(
         employee_name = employee_name,
@@ -15,7 +14,6 @@ async def create(session:AsyncSession, employee_name: str, tool_name: str, tool_
         tool_code = tool_code,
         quantity = quantity,
         price = price,
-        period = period,
     )
     session.add(inventory)  # Добавляем объект inventory в сессию, но он еще не сохранен в БД
     await session.commit()  # Сохраняем изменения в БД

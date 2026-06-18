@@ -1,6 +1,8 @@
 from datetime import date
 from pathlib import Path
 
+import pytest
+
 from services.excel_parser import parse_employee_directory, parse_inventory
 
 
@@ -25,9 +27,8 @@ def test_parse_employee_directory():
 def test_parse_employee_directory_empty():
     """Тестирование функции parse_employee_directory на корректность парсинга данных из пустого Excel-файла"""
     file_path = Path(__file__).parent / "fixtures" / "directory_employees_1.xlsx"
-    result = parse_employee_directory(file_path)
-    assert len(result) == 0
-    assert result == []
+    with pytest.raises(ValueError):
+        parse_employee_directory(file_path)
 
 
 def test_parse_inventory():
@@ -36,8 +37,7 @@ def test_parse_inventory():
     file_path = Path(__file__).parent / "fixtures" / "1c_inventories_test.xlsx"
 
     # Вызываем функцию парсинга и получаем результат
-    period = date(2026, 3, 1)
-    result = parse_inventory(file_path, period)
+    result = parse_inventory(file_path)
     print(result)
     assert len(result) == 4
     assert result[0] == {
@@ -46,7 +46,6 @@ def test_parse_inventory():
         "tool_code": "ЦБ000001111",
         "quantity": 2,
         "price": 2500.16,
-        "period": period
     }
     assert result[1] == {
         "employee_name": "Сергеев Сергей Сергеевич",
@@ -54,7 +53,6 @@ def test_parse_inventory():
         "tool_code": "БШ-00004444",
         "quantity": 1,
         "price": 12000,
-        "period": period
     }
 
 

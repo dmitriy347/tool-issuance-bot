@@ -11,3 +11,4 @@ pytest-asyncio
 python-dotenv
 httpx
 docxtpl
+python-multipart
