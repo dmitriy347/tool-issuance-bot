@@ -65,8 +65,12 @@ async def get_employee(file: UploadFile = File(...), db: AsyncSession = Depends(
     emp_3 = None
     if employee["second"] is not None:
         emp_2 = await get_by_name_fragment(db, employee["second"])
+        if emp_2 is None:
+            raise HTTPException(status_code=404, detail="Сотрудник не найден")
         if employee["third"] is not None:
             emp_3 = await get_by_name_fragment(db, employee["third"])
+            if emp_3 is None:
+                raise HTTPException(status_code=404, detail="Сотрудник не найден")
 
     # Получаем инвентарь для первого сотрудника
     inventory = await get_by_employee_name(db, emp_1.full_name)
