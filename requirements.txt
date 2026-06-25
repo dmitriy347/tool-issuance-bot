@@ -8,6 +8,7 @@ openpyxl
 python-docx
 pytest
 pytest-asyncio
+greenlet
 python-dotenv
 httpx
 docxtpl
