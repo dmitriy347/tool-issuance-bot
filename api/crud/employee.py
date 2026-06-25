@@ -1,5 +1,4 @@
 from datetime import date
-from unittest import result
 
 from sqlalchemy import select, delete
 
