@@ -1,48 +1,56 @@
 # Tool Issuance Bot
  
->Telegram-бот для автоматической генерации Word-документов (актов приёма-передачи инвентаря).
+>Telegram-бот для автоматической генерации документов (актов приёма-передачи).
  
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-000000?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![aiogram](https://img.shields.io/badge/aiogram-000000?logo=telegram&logoColor=white)](https://docs.aiogram.dev/)
 [![Groq](https://img.shields.io/badge/Groq-000000?logo=groq&logoColor=white)](https://www.groq.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![pytest](https://img.shields.io/badge/pytest-000000?logo=pytest&logoColor=white)](https://docs.pytest.org/)
 
 ## Зачем это нужно
  
-Бухгалтер каждый месяц вручную переносит данные из 1С в Word, составляет акты приёма-передачи инвентаря для каждого сотрудника. Это отнимает время + вероятность ошибки при копировании. 
+Бухгалтер регулярно составляет акты приёма-передачи (вручную переносит данные из 1С / Excel в Word). Это рутинная работа – отнимает время + вероятность ошибки при копировании. 
 
 Бот автоматизирует этот процесс:
 
 1. Принимает Excel-справочник с данными сотрудников (один раз)
-2. Принимает Excel-выгрузку из 1С с инвентарем за месяц (раз в месяц)
-3. По скриншоту из 1С находит сотрудника и генерирует готовый DOCX
+2. Принимает Excel-выгрузку из 1С (ежемесячно)
+3. По скриншоту из 1С ищет сотрудника и генерирует готовый DOCX
 ## Стек
  
-| Слой | Технология |
-|---|---|
-| Backend API | FastAPI |
-| AI (чтение скринов) | Groq API (vision) |
-| Telegram-бот | aiogram 3 |
-| Работа с Excel | openpyxl |
-| Генерация DOCX | docxtpl |
-| ORM | SQLAlchemy (async) |
-| Миграции | Alembic |
-| База данных | PostgreSQL |
-| Тесты | pytest + pytest-asyncio |
+| Слой            | Технология |
+|-----------------|---|
+| Backend         | FastAPI |
+| БД              | PostgreSQL |
+| AI              | Groq API (vision) |
+| Telegram-бот    | aiogram 3 |
+| Работа с Excel  | openpyxl |
+| Генерация DOCX  | docxtpl |
+| ORM             | SQLAlchemy (async) |
+| Миграции        | Alembic |
+| Тесты           | pytest + pytest-asyncio |
 | Контейнеризация | Docker + docker-compose |
  
 ## Архитектура
 
+```
+aiogram Bot  ──HTTP──▶  FastAPI backend  ──▶  PostgreSQL
+                              │
+                              ▼
+                       Groq Vision API 
+               (извлечение данных из скриншота)
+```
+
 **Поток данных при генерации документа:**
  
 ```
-Скриншот 1С
-    → Groq Vision извлекает фамилии из поля «Комментарий»
+Скриншот
+    → Groq Vision извлекает данные из поля «Комментарий»
     → FastAPI ищет сотрудников в БД по фрагменту фамилии
-    → FastAPI получает инвентарь сотрудника
+    → FastAPI получает инвентарь по сотруднику
     → docxtpl заполняет Word-шаблон
     → Бот отправляет готовый DOCX пользователю
 ```
