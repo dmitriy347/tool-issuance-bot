@@ -1,4 +1,6 @@
+from datetime import date
 from os import getenv
+
 import pytest
 from dotenv import load_dotenv
 from sqlalchemy import URL
@@ -48,3 +50,24 @@ async def db_session():
     # После теста удаляем все таблицы.
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+
+
+@pytest.fixture
+def employee_data(db_session: AsyncSession):
+    """Возвращает словарь с данными сотрудника для тестов."""
+    return {
+        "full_name": "Иванов Иван Иванович",
+        "position": "Механик",
+        "contract_date": date(2024, 1, 10),
+        "contract_number": "1-aa"
+    }
+
+@pytest.fixture
+def inventory_data(db_session: AsyncSession):
+    return {
+        "employee_name": "Иванов Иван Иванович",
+        "tool_name": "Отвертка",
+        "tool_code": "12345",
+        "quantity": 10,
+        "price": 100.50
+    }
