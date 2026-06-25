@@ -38,17 +38,27 @@ def inventory_to_dict(inventory: list[Inventory]) -> list[dict]:
     return inventory_list
 
 
+async def _find_employee_or_404(db: AsyncSession, name_fragment: str) -> Employee:
+    """Ищет сотрудника по фрагменту имени в БД. Если не найден, возвращает 404."""
+    employee = await get_by_name_fragment(db, name_fragment)
+    if employee is None:
+        raise HTTPException(status_code=404, detail=f"Сотрудник не найден: {name_fragment}")
+    return employee
+
+
 @router.post("/generate")
-async def get_employee(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
+async def generate_document(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
     """
-    Принимает загруженный файл, читает байты, извлекает фрагменты ФИО сотрудника, ищет сотрудника (сотрудников) в БД,
-    получает его инвентарь первого сотрудника, в зависимости от количества сотрудников генерирует DOCX-файл.
+    Принимает скриншот, извлекает фрагменты ФИО сотрудника(ов) через AI, ищет сотрудника(ов) в БД,
+    получает инвентарь первого сотрудника, генерирует DOCX-документ по шаблону (на 1/2/3 сотрудников).
     """
     # Читаем байты загруженного файла
     content = await file.read()
-    # Парсим файл и получаем фрагменты ФИО сотрудника
+
+    # Парсим файл и извлекаем фрагменты ФИО из скриншота
     try:
-        employee = await extract_employee_names(content)
+        names = await extract_employee_names(content)
+
     # Если Groq API вернул ошибку (неверный API-ключ, превышен лимит запросов)
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=502, detail=f"Ошибка сервиса распознавания: {str(e)}")
@@ -56,35 +66,34 @@ async def get_employee(file: UploadFile = File(...), db: AsyncSession = Depends(
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=502, detail=f"Не удалось распознать данные: {str(e)}")
 
-    # Ищем первого сотрудника в БД по фрагменту имени
-    emp_1 = await get_by_name_fragment(db, employee["primary"])
-    if emp_1 is None:
-        raise HTTPException(status_code=404, detail="Сотрудник не найден")
+    # Ищем сотрудников в БД по фрагментам имени
+    employees = [await _find_employee_or_404(db, names["primary"])]
+    if names["second"] is not None:
+        employees.append(await _find_employee_or_404(db, names["second"]))
+    if names["third"] is not None:
+        employees.append(await _find_employee_or_404(db, names["third"]))
 
-    emp_2 = None
-    emp_3 = None
-    if employee["second"] is not None:
-        emp_2 = await get_by_name_fragment(db, employee["second"])
-        if emp_2 is None:
-            raise HTTPException(status_code=404, detail="Сотрудник не найден")
-        if employee["third"] is not None:
-            emp_3 = await get_by_name_fragment(db, employee["third"])
-            if emp_3 is None:
-                raise HTTPException(status_code=404, detail="Сотрудник не найден")
+    # Получаем инвентарь для первого сотрудника (т.к. в 1C он всегда привязан к первому сотруднику).
+    inventory = await get_by_employee_name(db, employees[0].full_name)
 
-    # Получаем инвентарь для первого сотрудника
-    inventory = await get_by_employee_name(db, emp_1.full_name)
-    # Если инвентарь не найден [пустой список], возвращаем 404
+    # Если инвентарь не найден [пустой список], возвращаем 404.
     if not inventory:
         raise HTTPException(status_code=404, detail="Инвентарь по сотруднику не найден")
+
+    inventory_dicts = inventory_to_dict(inventory)
+    employee_dicts = [employee_to_dict(e) for e in employees]
+
     try:
-        if emp_2 is None and emp_3 is None:
-            docx_content = generate_single(employee_to_dict(emp_1), inventory_to_dict(inventory))
-        elif emp_2 and emp_3 is None:
-            docx_content = generate_two(employee_to_dict(emp_1), employee_to_dict(emp_2), inventory_to_dict(inventory))
+        if len(employee_dicts) == 1:
+            docx_content = generate_single(employee_dicts[0], inventory_dicts)
+        elif len(employee_dicts) == 2:
+            docx_content = generate_two(employee_dicts[0], employee_dicts[1], inventory_dicts)
         else:
-            docx_content = generate_three(employee_to_dict(emp_1), employee_to_dict(emp_2), employee_to_dict(emp_3), inventory_to_dict(inventory))
+            docx_content = generate_three(employee_dicts[0], employee_dicts[1], employee_dicts[2], inventory_dicts)
     except FileNotFoundError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    return Response(content=docx_content, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    return Response(
+        content=docx_content,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
