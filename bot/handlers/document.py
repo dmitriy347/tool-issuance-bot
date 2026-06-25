@@ -32,7 +32,7 @@ async def handle_directory_file(message: Message, bot: Bot, state: FSMContext):
         await state.clear()
         return
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         try:
             file = await bot.get_file(message.document.file_id)
             file_bytes = await bot.download_file(file.file_path)
@@ -62,7 +62,7 @@ async def handle_new_file_inventory(message: Message, state: FSMContext, bot: Bo
         await state.clear()
         return
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         try:
             file = await bot.get_file(message.document.file_id)
             file_bytes = await bot.download_file(file.file_path)
@@ -87,7 +87,13 @@ async def handle_new_file_generate(message: Message, state: FSMContext, bot: Bot
     Обработчик загрузки скриншота для генерации документа.
     Скачивает файл, отправляет его в API для обработки и очищает состояние.
     """
-    async with httpx.AsyncClient() as client:
+    # Проверяем, что пользователь отправил фото, а не документ или другой тип сообщения
+    if not message.photo:
+        await message.answer("Пожалуйста, отправьте скриншот как фото")
+        await state.clear()
+        return
+
+    async with httpx.AsyncClient(timeout=60.0) as client:
         try:
             # Получаем последний (с самым большим разрешением) файл из списка фотографий
             file = await bot.get_file(message.photo[-1].file_id)

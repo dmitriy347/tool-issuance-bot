@@ -10,8 +10,8 @@ from services.excel_parser import parse_inventory
 router = APIRouter(prefix="/inventories", tags=["inventories"])
 
 @router.get("/", response_model=list[InventoryResponse])
-async def get_all_inventories(employee_name: str, db: AsyncSession = Depends(get_db)):
-    """Возвращает список всего инвентаря."""
+async def get_inventory_by_employee(employee_name: str, db: AsyncSession = Depends(get_db)):
+    """Возвращает список инвентаря по имени сотрудника. Если сотрудник не найден, возвращает пустой список."""
     return await get_by_employee_name(db, employee_name)
 
 @router.post("/", response_model=InventoryResponse)
