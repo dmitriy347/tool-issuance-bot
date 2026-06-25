@@ -105,24 +105,15 @@ cp .env.example .env
  
 ```env
 BOT_TOKEN=your_telegram_bot_token
- 
-DB_NAME=tool_issuance
-DB_USER=postgres
-DB_PASSWORD=your_password
-DB_HOST=db
-DB_PORT=5432
- 
 GROQ_API_KEY=your_groq_api_key
- 
-API_URL=http://api:8000
 ```
  
 ### 3. Добавьте Word-шаблоны
  
 Положите файлы шаблонов в папку `templates/`:
-- `single_employee.docx` - для одного сотрудника
-- `two_employees.docx` - для двух сотрудников
-- `three_employees.docx` - для трёх сотрудников
+- `single_employee.docx` – для одного сотрудника
+- `two_employees.docx` – для двух сотрудников
+- `three_employees.docx` – для трёх сотрудников
 
 ### 4. Запуск
  
@@ -160,12 +151,12 @@ docker-compose up --build
  
 ### Инвентарь `/api/inventories`
  
-| Метод | Путь | Описание |
-|---|---|---|
-| `GET` | `/api/inventories/?employee_name=` | Инвентарь сотрудника |
-| `POST` | `/api/inventories/` | Добавить позицию |
-| `DELETE` | `/api/inventories/` | Удалить весь инвентарь |
-| `POST` | `/api/inventories/upload` | Загрузить Excel из 1С |
+| Метод | Путь | Описание                          |
+|---|---|-----------------------------------|
+| `GET` | `/api/inventories/?employee_name=` | Инвентарь сотрудника              |
+| `POST` | `/api/inventories/` | Добавить позицию                  |
+| `DELETE` | `/api/inventories/` | Удалить весь инвентарь            |
+| `POST` | `/api/inventories/upload` | Загрузить Excel-файл с инвентарем |
  
 ### Документы `/api/documents`
  
@@ -184,9 +175,13 @@ pytest
  
 Покрыты:
 - Парсинг Excel-справочника и выгрузки из 1С (`test_excel_parser.py`)
-- Генерация DOCX для одного и двух сотрудников (`test_docx_generator.py`)
-- AI-извлечение фамилий из скриншотов (`test_ai_extractor.py`)
-> `test_ai_extractor.py` делает реальные запросы к Groq API, для запуска нужен `GROQ_API_KEY` в `.env`.
+- Генерация DOCX для одного / двух / трех сотрудников (`test_docx_generator.py`)
+- AI-извлечение данных из скриншота (`test_ai_extractor.py`)
+- CRUD-операции для сотрудников и инвентаря (`test_employee_crud.py`, `test_inventory_crud.py`)
+> `test_ai_extractor.py` делает реальные запросы к Groq API, поэтому для запуска нужен `GROQ_API_KEY` в `.env`.
+
+> CRUD-тесты используют отдельную тестовую БД PostgreSQL (`TEST_DB_NAME` в `.env`). БД создается вручную:
+> `docker exec -it tool_issuance_db psql -U <DB_USER> -c "CREATE DATABASE tool_issuance_test;"`
  
 
 
