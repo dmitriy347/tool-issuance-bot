@@ -2,6 +2,7 @@ import httpx
 import json
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from fastapi.responses import Response
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.crud.employee import get_by_name_fragment
@@ -74,13 +75,16 @@ async def generate_document(file: UploadFile = File(...), db: AsyncSession = Dep
     # Если модель вернула некорректный JSON
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=502, detail=f"Не удалось распознать данные: {str(e)}")
+    # Если данные не соответствуют Pydantic-схеме ExtractedNames
+    except ValidationError as e:
+        raise HTTPException(status_code=502, detail=f"Ошибка валидации данных: {str(e)}")
 
     # Ищем сотрудников в БД по фрагментам имени
-    employees = [await _find_employee_or_404(db, names["primary"])]
-    if names["second"] is not None:
-        employees.append(await _find_employee_or_404(db, names["second"]))
-    if names["third"] is not None:
-        employees.append(await _find_employee_or_404(db, names["third"]))
+    employees = [await _find_employee_or_404(db, names.primary)]
+    if names.second is not None:
+        employees.append(await _find_employee_or_404(db, names.second))
+    if names.third is not None:
+        employees.append(await _find_employee_or_404(db, names.third))
 
     # Получаем инвентарь для первого сотрудника (т.к. в 1C он всегда привязан к первому сотруднику).
     inventory = await get_by_employee_name(db, employees[0].full_name)
