@@ -5,7 +5,7 @@ import pytest
 from docx import Document
 from io import BytesIO
 
-from services.docx_generator import _format_date, _format_item_price, _render, generate_single, generate_two
+from services.docx_generator import _format_date, _format_item_price, _render, generate_single, generate_two, generate_three
 
 
 @pytest.fixture
@@ -40,6 +40,24 @@ def second_employee():
         "issued_by": "Кем то",
         "address": "г. Екатеринбург, ул. Малышева, д. 2"
     }
+
+
+@pytest.fixture
+def third_employee():
+    """Фикстура, которая возвращает словарь с данными третьего сотрудника для тестов."""
+    return {
+        "full_name": "Сидоров Сидор Сидорович",
+        "position": "Слесарь",
+        "contract_date": date(2023, 5, 15),
+        "contract_number": "3-cc",
+        "document_type": "Паспорт РФ",
+        "id_series": "5678",
+        "id_number": "987654",
+        "id_issued_date": date(2015, 6, 20),
+        "issued_by": "Третьим отделением",
+        "address": "г. Екатеринбург, ул. Мира, д. 3"
+    }
+
 
 @pytest.fixture
 def items():
@@ -144,3 +162,24 @@ def test_generate_two(single_employee, second_employee, items):
     assert "Набор ключей" in table_text
     assert "2 500,00" in table_text
     assert "1 000,00" in table_text
+
+
+def test_generate_three_smoke(single_employee, second_employee, third_employee, items):
+    """
+    Smoke-тест генерации документа для трёх сотрудников.
+    Не дублирует детальную проверку каждого поля, т.к. это уже проверено в тестах для одного и двух сотрудников.
+    Ловит опечатку в плейсхолдерах внутри шаблона three_employees.docx.
+    Поверяет, что документ рендерится без ошибок и ФИО всех трех сотрудников попали в тест.
+    """
+    result = generate_three(single_employee, second_employee, third_employee, items)
+    doc = Document(BytesIO(result))
+
+    full_text = "\n".join(p.text for p in doc.paragraphs)
+    assert "Иванов Иван Иванович" in full_text
+    assert "Петров Петр Петрович" in full_text
+    assert "Сидоров Сидор Сидорович" in full_text
+
+    for table in doc.tables:
+        table_text = "\n".join(cell.text for row in table.rows for cell in row.cells)
+    assert "Вороток шарнирный" in table_text
+    assert "Набор ключей" in table_text
