@@ -2,9 +2,10 @@ import httpx
 import json
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from fastapi.responses import Response
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.crud.employee import get_by_name_fragment
+from api.crud.employee import get_by_name_fragment, EmployeeError
 from api.crud.inventory import get_by_employee_name
 from database import get_db
 from models.employee import Employee
@@ -46,7 +47,10 @@ def inventory_to_dict(inventory: list[Inventory]) -> list[dict]:
 
 async def _find_employee_or_404(db: AsyncSession, name_fragment: str) -> Employee:
     """Ищет сотрудника по фрагменту имени в БД. Если не найден, возвращает 404."""
-    employee = await get_by_name_fragment(db, name_fragment)
+    try:
+        employee = await get_by_name_fragment(db, name_fragment)
+    except EmployeeError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     if employee is None:
         raise HTTPException(status_code=404, detail=f"Сотрудник не найден: {name_fragment}")
     return employee
@@ -68,16 +72,22 @@ async def generate_document(file: UploadFile = File(...), db: AsyncSession = Dep
     # Если Groq API вернул ошибку (неверный API-ключ, превышен лимит запросов)
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=502, detail=f"Ошибка сервиса распознавания: {str(e)}")
+    # Если у Groq API истек тайм-аут
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Истекло время ожидания сервиса распознавания")
     # Если модель вернула некорректный JSON
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=502, detail=f"Не удалось распознать данные: {str(e)}")
+    # Если данные не соответствуют Pydantic-схеме ExtractedNames
+    except ValidationError as e:
+        raise HTTPException(status_code=502, detail=f"Ошибка валидации данных: {str(e)}")
 
     # Ищем сотрудников в БД по фрагментам имени
-    employees = [await _find_employee_or_404(db, names["primary"])]
-    if names["second"] is not None:
-        employees.append(await _find_employee_or_404(db, names["second"]))
-    if names["third"] is not None:
-        employees.append(await _find_employee_or_404(db, names["third"]))
+    employees = [await _find_employee_or_404(db, names.primary)]
+    if names.second is not None:
+        employees.append(await _find_employee_or_404(db, names.second))
+    if names.third is not None:
+        employees.append(await _find_employee_or_404(db, names.third))
 
     # Получаем инвентарь для первого сотрудника (т.к. в 1C он всегда привязан к первому сотруднику).
     inventory = await get_by_employee_name(db, employees[0].full_name)
