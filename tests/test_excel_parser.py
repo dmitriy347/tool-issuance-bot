@@ -21,6 +21,12 @@ def test_parse_employee_directory():
         "position": "Механик",
         "contract_number": "1-aa",
         "contract_date": date(2024, 1, 10),
+        "document_type": "Паспорт РФ",
+        "id_series": "1234",
+        "id_number": "456789",
+        "id_issued_date": date(2016, 4, 25),
+        "issued_by": "Подразделением 1",
+        "address": "г. Екатеринбург, ул. Ленина, д. 1",
     }
 
 
