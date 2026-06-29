@@ -15,8 +15,15 @@ def single_employee():
         "full_name": "Иванов Иван Иванович",
         "position": "Механик",
         "contract_date": date(2024, 1, 10),
-        "contract_number": "1-aa"
+        "contract_number": "1-aa",
+        "document_type": "Паспорт РФ",
+        "id_series": "1234",
+        "id_number": "456789",
+        "id_issued_date": date(2000, 1, 1),
+        "issued_by": "Подразделением",
+        "address": "г. Екатеринбург, ул. Ленина, д. 1"
     }
+
 
 @pytest.fixture
 def second_employee():
@@ -25,7 +32,13 @@ def second_employee():
         "full_name": "Петров Петр Петрович",
         "position": "Маляр",
         "contract_date": date(2024, 11, 1),
-        "contract_number": "2-bb"
+        "contract_number": "2-bb",
+        "document_type": "ВНЖ",
+        "id_series": "0000",
+        "id_number": "123456",
+        "id_issued_date": date(2020, 2, 2),
+        "issued_by": "Кем то",
+        "address": "г. Екатеринбург, ул. Малышева, д. 2"
     }
 
 @pytest.fixture
@@ -42,10 +55,12 @@ def test_format_date(single_employee):
     d = single_employee["contract_date"]
     assert _format_date(d) == "10 января 2024"
 
+
 def test_format_item_price(items):
     """Тестирует форматирование цены в строку формата '2 500,00'."""
     price = items[0]["price"]
     assert _format_item_price(price) == "2 500,00"
+
 
 def test_render(single_employee):
     """
@@ -60,39 +75,68 @@ def test_render(single_employee):
     # Проверяем, что результат - это байты
     assert isinstance(result, bytes)
 
+
 def test_generate_single(single_employee, items):
     """
     Тестирует генерацию документа для одного сотрудника.
-    Проверяет, что в документе содержится имя сотрудника / отформатированная дата.
+    Проверяет, что в документе содержатся все поля сотрудника и отформатированные даты.
     Также проверяет, что таблица с инвентарем заполнилась и содержит название инструмента и отформатированную цену.
     """
     result = generate_single(single_employee, items)
     doc = Document(BytesIO(result))
 
-    # Проверяем, что документ содержит имя сотрудника и отформатированную дату
+    # Проверяем, что документ содержит все необходимые данные сотрудника
     full_text = "\n".join(p.text for p in doc.paragraphs)
     assert "Иванов Иван Иванович" in full_text
+    assert "Механик" in full_text
     assert "10 января 2024" in full_text
+    assert "1-aa" in full_text
+    assert "Паспорт РФ" in full_text
+    assert "1234" in full_text
+    assert "456789" in full_text
+    assert "1 января 2000" in full_text
+    assert "Подразделением" in full_text
+    assert "г. Екатеринбург, ул. Ленина, д. 1" in full_text
 
     # Проверяем, что таблица с инвентарем заполнилась и содержит название инструмента и отформатированную цену
     for table in doc.tables:
         table_text = "\n".join(cell.text for row in table.rows for cell in row.cells)
     assert "Вороток шарнирный" in table_text
+    assert "Набор ключей" in table_text
     assert "2 500,00" in table_text
+    assert "1 000,00" in table_text
+
 
 def test_generate_two(single_employee, second_employee, items):
     """
     Тестирует генерацию документа для двух сотрудников.
-    Проверяет, что в документе содержится имя обоих сотрудников / отформатированные даты.
+    Проверяет, что в документе содержатся все поля всех сотрудников и отформатированные даты.
     Также проверяет, что таблица с инвентарем заполнилась и содержит название инструмента и отформатированную цену.
     """
     result = generate_two(single_employee, second_employee, items)
     doc = Document(BytesIO(result))
     full_text = "\n".join(p.text for p in doc.paragraphs)
     assert "Иванов Иван Иванович" in full_text
-    assert "Петров Петр Петрович" in full_text
+    assert "Механик" in full_text
     assert "10 января 2024" in full_text
+    assert "1-aa" in full_text
+    assert "Паспорт РФ" in full_text
+    assert "1234" in full_text
+    assert "456789" in full_text
+    assert "1 января 2000" in full_text
+    assert "Подразделением" in full_text
+    assert "г. Екатеринбург, ул. Ленина, д. 1" in full_text
+
+    assert "Петров Петр Петрович" in full_text
+    assert "Маляр" in full_text
     assert "1 ноября 2024" in full_text
+    assert "2-bb" in full_text
+    assert "ВНЖ" in full_text
+    assert "0000" in full_text
+    assert "123456" in full_text
+    assert "2 февраля 2020" in full_text
+    assert "Кем то" in full_text
+    assert "г. Екатеринбург, ул. Малышева, д. 2" in full_text
 
     for table in doc.tables:
         table_text = "\n".join(cell.text for row in table.rows for cell in row.cells)
