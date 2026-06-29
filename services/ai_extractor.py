@@ -45,7 +45,7 @@ async def extract_employee_names(image_bytes: bytes) -> dict:
             }
         ]
     }
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=httpx.Timeout(45.0)) as client:
         # Отправляем POST-запрос к API Groq с изображением и промтом, получаем JSON-ответ
         response = await client.post(url, headers=headers, json=body)
         response.raise_for_status()

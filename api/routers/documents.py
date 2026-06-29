@@ -68,6 +68,9 @@ async def generate_document(file: UploadFile = File(...), db: AsyncSession = Dep
     # Если Groq API вернул ошибку (неверный API-ключ, превышен лимит запросов)
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=502, detail=f"Ошибка сервиса распознавания: {str(e)}")
+    # Если у Groq API истек тайм-аут
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Истекло время ожидания сервиса распознавания")
     # Если модель вернула некорректный JSON
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=502, detail=f"Не удалось распознать данные: {str(e)}")
