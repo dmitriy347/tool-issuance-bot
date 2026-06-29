@@ -21,6 +21,12 @@ def employee_to_dict(employee: Employee) -> dict:
         "position": employee.position,
         "contract_number": employee.contract_number,
         "contract_date": employee.contract_date,
+        "document_type": employee.document_type,
+        "id_series": employee.id_series,
+        "id_number": employee.id_number,
+        "id_issued_date": employee.id_issued_date,
+        "issued_by": employee.issued_by,
+        "address": employee.address,
     }
     return employee_dict
 
