@@ -21,40 +21,52 @@
 3. По скриншоту из 1С ищет сотрудника и генерирует готовый DOCX
 ## Стек
  
-| Слой            | Технология |
-|-----------------|---|
-| Backend         | FastAPI |
-| БД              | PostgreSQL |
-| AI              | Groq API (vision) |
-| Telegram-бот    | aiogram 3 |
-| Работа с Excel  | openpyxl |
-| Генерация DOCX  | docxtpl |
-| ORM             | SQLAlchemy (async) |
-| Миграции        | Alembic |
+| Слой            | Технология              |
+|-----------------|-------------------------|
+| Backend         | FastAPI                 |
+| БД              | PostgreSQL              |
+| AI              | Groq API (vision)       |
+| Telegram-бот    | aiogram 3               |
+| Работа с Excel  | openpyxl                |
+| Генерация DOCX  | docxtpl                 |
+| ORM             | SQLAlchemy (async)      |
+| Миграции        | Alembic                 |
 | Тесты           | pytest + pytest-asyncio |
 | Контейнеризация | Docker + docker-compose |
  
 ## Архитектура
 
-```
-aiogram Bot  ──HTTP──▶  FastAPI backend  ──▶  PostgreSQL
-                              │
-                              ▼
-                       Groq Vision API 
-               (извлечение данных из скриншота)
+```mermaid
+graph LR
+    User[Пользователь] --> |Telegram| Bot[aiogram Bot]
+    Bot --> |HTTP| API[FastAPI backend]
+    
+    API --> DB[(PostgreSQL)]
+    API --> |Vision API| Groq[Groq Vision API]
 ```
 
-**Поток данных при генерации документа:**
+**Диаграмма потока генерации документа:**
  
+```mermaid
+sequenceDiagram
+    participant User as Пользователь
+    participant Bot as Telegram Bot
+    participant API as FastAPI
+    participant Groq as Groq Vision API
+    participant DB as PostgreSQL
+
+    User->>Bot: Скриншот из 1С
+    Bot->>API: POST /api/documents/generate
+    API->>Groq: Скриншот + промпт
+    Groq-->>API: Фрагмент ФИО сотрудников
+    API->>DB: Поиск сотрудников по фрагменту
+    DB-->>API: Данные сотрудников
+    API->>DB: Получение инвентаря
+    DB-->>API: Список инвентаря
+    API-->>Bot: DOCX-файл
+    Bot-->>User: Готовый документ
 ```
-Скриншот
-    → Groq Vision извлекает данные из поля «Комментарий»
-    → FastAPI ищет сотрудников в БД по фрагменту фамилии
-    → FastAPI получает инвентарь по сотруднику
-    → docxtpl заполняет Word-шаблон
-    → Бот отправляет готовый DOCX пользователю
-```
- 
+
 ## Структура проекта
  
 ```
@@ -125,11 +137,11 @@ docker-compose up --build
  
 ## Команды бота
  
-| Команда | Описание                                                                                        |
-|---|-------------------------------------------------------------------------------------------------|
+| Команда             | Описание                                                                                        |
+|---------------------|-------------------------------------------------------------------------------------------------|
 | `/update_directory` | Загрузить Excel-справочник сотрудников. Заменяет все существующие записи.                       |
 | `/update_inventory` | Загрузить Excel-выгрузку из 1С с инвентарем за текущий месяц. Заменяет все существующие записи. |
-| `/generate` | Отправить скриншот из 1С → получить готовый DOCX.                                               |
+| `/generate`         | Отправить скриншот из 1С → получить готовый DOCX.                                               |
  
 **Формат поля «Комментарий» на скриншоте:**
 - Один сотрудник: `Иванов`
@@ -141,27 +153,27 @@ docker-compose up --build
  
 ### Сотрудники `/api/employees`
  
-| Метод | Путь | Описание |
-|---|---|---|
-| `GET` | `/api/employees/` | Список всех сотрудников |
-| `POST` | `/api/employees/` | Создать сотрудника |
-| `DELETE` | `/api/employees/` | Удалить всех сотрудников |
-| `GET` | `/api/employees/search?employee_name=` | Поиск по фрагменту фамилии |
-| `POST` | `/api/employees/upload` | Загрузить Excel-справочник |
+| Метод    | Путь                                   | Описание                   |
+|----------|----------------------------------------|----------------------------|
+| `GET`    | `/api/employees/`                      | Список всех сотрудников    |
+| `POST`   | `/api/employees/`                      | Создать сотрудника         |
+| `DELETE` | `/api/employees/`                      | Удалить всех сотрудников   |
+| `GET`    | `/api/employees/search?employee_name=` | Поиск по фрагменту фамилии |
+| `POST`   | `/api/employees/upload`                | Загрузить Excel-справочник |
  
 ### Инвентарь `/api/inventories`
  
-| Метод | Путь | Описание                          |
-|---|---|-----------------------------------|
-| `GET` | `/api/inventories/?employee_name=` | Инвентарь сотрудника              |
-| `POST` | `/api/inventories/` | Добавить позицию                  |
-| `DELETE` | `/api/inventories/` | Удалить весь инвентарь            |
-| `POST` | `/api/inventories/upload` | Загрузить Excel-файл с инвентарем |
+| Метод    | Путь                               | Описание                          |
+|----------|------------------------------------|-----------------------------------|
+| `GET`    | `/api/inventories/?employee_name=` | Инвентарь сотрудника              |
+| `POST`   | `/api/inventories/`                | Добавить позицию                  |
+| `DELETE` | `/api/inventories/`                | Удалить весь инвентарь            |
+| `POST`   | `/api/inventories/upload`          | Загрузить Excel-файл с инвентарем |
  
 ### Документы `/api/documents`
  
-| Метод | Путь | Описание |
-|---|---|---|
+| Метод  | Путь                      | Описание                        |
+|--------|---------------------------|---------------------------------|
 | `POST` | `/api/documents/generate` | Принять скриншот → вернуть DOCX |
  
 Интерактивная документация: `http://localhost:8000/docs`
@@ -182,8 +194,3 @@ pytest
 
 > CRUD-тесты используют отдельную тестовую БД PostgreSQL (`TEST_DB_NAME` в `.env`). БД создается вручную:
 > `docker exec -it tool_issuance_db psql -U <DB_USER> -c "CREATE DATABASE tool_issuance_test;"`
- 
-
-
-
-
