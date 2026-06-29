@@ -9,6 +9,12 @@ class EmployeeBase(BaseModel):
     position: str
     contract_number: str
     contract_date: date
+    document_type: str
+    id_series: str
+    id_number: str
+    id_issued_date: date
+    issued_by: str
+    address: str
 
 
 class EmployeeCreate(EmployeeBase):

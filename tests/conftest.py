@@ -58,8 +58,14 @@ def employee_data(db_session: AsyncSession):
     return {
         "full_name": "Иванов Иван Иванович",
         "position": "Механик",
+        "contract_number": "1-aa",
         "contract_date": date(2024, 1, 10),
-        "contract_number": "1-aa"
+        "document_type": "Паспорт РФ",
+        "id_series": "1234",
+        "id_number": "456789",
+        "id_issued_date": date(2020, 5, 15),
+        "issued_by": "Подразделением",
+        "address": "г. Екатеринбург, ул. Ленина, д. 1"
     }
 
 @pytest.fixture

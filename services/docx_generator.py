@@ -26,6 +26,12 @@ def _build_employee_context(employee: dict) -> dict:
         "position": employee["position"],
         "contract_date": _format_date(employee["contract_date"]),
         "contract_number": employee["contract_number"],
+        "document_type": employee["document_type"],
+        "id_series": employee["id_series"],
+        "id_number": employee["id_number"],
+        "id_issued_date": _format_date(employee["id_issued_date"]),
+        "issued_by": employee["issued_by"],
+        "address": employee["address"],
     }
     return emp
 

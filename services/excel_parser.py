@@ -6,6 +6,11 @@ from openpyxl import load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
 
 
+def _clean(value: str) -> str:
+    """Убирает лишние пробелы и заменяет неразрывные пробелы на обычные."""
+    return value.strip().replace("\xa0", " ")
+
+
 def parse_employee_directory(file_path: str | bytes) -> list[dict]:
     """Парсит Excel-файл с данными сотрудников и возвращает список словарей с данными каждого сотрудника."""
     # Если file_path - это байты (например, из загруженного файла), то оборачиваем его в BytesIO, чтобы load_workbook мог его прочитать
@@ -31,10 +36,16 @@ def parse_employee_directory(file_path: str | bytes) -> list[dict]:
                 if row[0] is not None: # Если первый столбец не пустой, считаем, что это данные сотрудника
                     employee = {
                         # Убираем лишние пробелы и заменяем неразрывные пробелы на обычные, чтобы данные были чистыми
-                        "full_name": row[0].strip().replace("\xa0", " "),
-                        "position": row[12].strip().replace("\xa0", " "),
-                        "contract_number": row[3].strip().replace("\xa0", " "),
+                        "full_name": _clean(row[0]),
+                        "position": _clean(row[12]),
+                        "contract_number": _clean(row[3]),
                         "contract_date": datetime.strptime(row[8], "%d.%m.%Y").date(), # Преобразуем строку с датой в объект date, предполагая формат "день.месяц.год"
+                        "document_type": _clean(row[13]),
+                        "id_series": _clean(row[14]),
+                        "id_number": _clean(row[15]),
+                        "id_issued_date": datetime.strptime(row[16], "%d.%m.%Y").date(),
+                        "issued_by": _clean(row[17]),
+                        "address": _clean(row[18])
                     }
                     employees.append(employee)
                 else:  # Иначе, считаем, что данные сотрудников закончились

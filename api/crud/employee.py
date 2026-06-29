@@ -7,13 +7,31 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.employee import Employee
 
 
-async def create(session: AsyncSession, full_name: str, position: str, contract_number: str, contract_date: date) -> Employee:
+async def create(
+        session: AsyncSession,
+        full_name: str,
+        position: str,
+        contract_number: str,
+        contract_date: date,
+        document_type: str,
+        id_series: str,
+        id_number: str,
+        id_issued_date: date,
+        issued_by: str,
+        address: str
+) -> Employee:
     """Создаёт нового сотрудника в БД и возвращает его с заполненным id и данными."""
     employee = Employee(
         full_name = full_name,
         position = position,
         contract_number = contract_number,
-        contract_date = contract_date
+        contract_date = contract_date,
+        document_type = document_type,
+        id_series = id_series,
+        id_number = id_number,
+        id_issued_date = id_issued_date,
+        issued_by = issued_by,
+        address = address
     )
     session.add(employee)
     await session.commit()

@@ -24,6 +24,7 @@ async def extract_employee_names(image_bytes: bytes) -> dict:
     }
     body = {
         "model": model,
+        "temperature": 0,
         "messages": [
             {
                 "role": "user",
