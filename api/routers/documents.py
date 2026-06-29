@@ -5,7 +5,7 @@ from fastapi.responses import Response
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.crud.employee import get_by_name_fragment
+from api.crud.employee import get_by_name_fragment, EmployeeError
 from api.crud.inventory import get_by_employee_name
 from database import get_db
 from models.employee import Employee
@@ -47,7 +47,10 @@ def inventory_to_dict(inventory: list[Inventory]) -> list[dict]:
 
 async def _find_employee_or_404(db: AsyncSession, name_fragment: str) -> Employee:
     """Ищет сотрудника по фрагменту имени в БД. Если не найден, возвращает 404."""
-    employee = await get_by_name_fragment(db, name_fragment)
+    try:
+        employee = await get_by_name_fragment(db, name_fragment)
+    except EmployeeError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     if employee is None:
         raise HTTPException(status_code=404, detail=f"Сотрудник не найден: {name_fragment}")
     return employee

@@ -1,10 +1,15 @@
 from datetime import date
 
 from sqlalchemy import select, delete
+from sqlalchemy.exc import MultipleResultsFound
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.employee import Employee
+
+class EmployeeError(Exception):
+    """Поднимается, если по фрагменту имени найдено больше одного сотрудника."""
+    pass
 
 
 async def create(
@@ -61,4 +66,8 @@ async def get_by_name_fragment(session: AsyncSession, fragment: str) -> Employee
     result = await session.execute(
         select(Employee).where(Employee.full_name.ilike(f"{fragment}%"))
     )
-    return result.scalar_one_or_none()
+    try:
+        return result.scalar_one_or_none()
+    # Если найдено несколько сотрудников по фрагменту, то поднимаем ошибку EmployeeError
+    except MultipleResultsFound as e:
+        raise EmployeeError(f"Найдено несколько сотрудников по фрагменту: {fragment}") from e
