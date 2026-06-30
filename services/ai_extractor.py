@@ -5,19 +5,24 @@ from os import getenv
 
 from api.schemas.ai_extraction import ExtractedNames
 
-text = ("Проанализируй файл, найди и прочитай поле Комментарий, проверь его на наличие символа \"/\","
-        "в зависимости от количества этих символов выбери один из 3 вариантов развития событий:"
-        "если в поле Комментарий НЕТ символа \"/\" - значит это 1 вариант - взять ТОЛЬКО первое слово целиком как last_name_1, last_name_2 == null, last_name_3 == null, ВСЕ последующие слова игнорировать,"
-        "если в поле Комментарий есть ТОЛЬКО 1 символ \"/\" - значит это 2 вариант - взять последнее слово перед символом \"/\" как last_name_1, и первое слово после символа \"/\" как last_name_2, last_name_3 == null,"
-        "если в поле Комментарий есть 2 символа \"/\" - значит это 3 вариант - взять последнее слово перед первым символом \"/\" как last_name_1, взять последнее слово перед вторым символом \"/\" как last_name_2, и первое слово после второго символа \"/\" как last_name_3,"
-        "Когда определишь подходящий из этих трех вариантов - верни ТОЛЬКО JSON, без пояснений и markdown-форматирования в формате {\"primary\": last_name_1, \"second\": last_name_2, \"third\": last_name_3}")
+text = (
+    "Найди поле «Комментарий» на изображении и определи фамилии сотрудников по следующим правилам:\n"
+    "- Если в поле нет символа \"/\": primary = первое слово, second = null, third = null.\n"
+    "- Если есть один символ \"/\": primary = последнее слово перед \"/\", second = первое слово после \"/\", third = null.\n"
+    "- Если есть два символа \"/\": primary = последнее слово перед первым \"/\", second = последнее слово перед вторым \"/\", third = первое слово после второго \"/\".\n"
+    "Все фамилии пиши только кириллицей (русский алфавит), без латинских букв, даже если отдельные буквы похожи.\n"
+    "Верни ТОЛЬКО JSON без пояснений и markdown-форматирования: "
+    "{\"primary\": фамилия, \"second\": фамилия или null, \"third\": фамилия или null}"
+)
 
 url = "https://api.groq.com/openai/v1/chat/completions"
-model = "meta-llama/llama-4-scout-17b-16e-instruct"
+model = "qwen/qwen3.6-27b"
 
 async def extract_employee_names(image_bytes: bytes) -> ExtractedNames:
     """
     Отправляет изображение и текстовый запрос в модель для извлечения фамилии сотрудника из поля "Комментарий".
+    response_format указывает, что мы ожидаем получить JSON-объект в ответе.
+    reasoning_effort отключает thinking mode.
     """
     headers = {
         "Content-Type": "application/json",
@@ -25,7 +30,9 @@ async def extract_employee_names(image_bytes: bytes) -> ExtractedNames:
     }
     body = {
         "model": model,
+        "response_format": {"type": "json_object"},
         "temperature": 0,
+        "reasoning_effort": "none",
         "messages": [
             {
                 "role": "user",
@@ -39,7 +46,7 @@ async def extract_employee_names(image_bytes: bytes) -> ExtractedNames:
                     },
                     {
                         "type": "text",
-                        # Промт
+                        # Промпт
                         "text": text
                     }
                 ]
@@ -52,12 +59,6 @@ async def extract_employee_names(image_bytes: bytes) -> ExtractedNames:
         response.raise_for_status()
         # Извлекаем текстовый ответ модели, который должен быть JSON-строкой
         data = response.json()["choices"][0]["message"]["content"]
-
-        # Если модель обернула ответ в markdown-блок - извлекаем только JSON
-        if "```json" in data:
-            data = data.split("```json")[1].split("```")[0].strip()  #
-        elif "```" in data:
-            data = data.split("```")[1].split("```")[0].strip()
 
         # Распарсим строку JSON в словарь Python
         result = json.loads(data)

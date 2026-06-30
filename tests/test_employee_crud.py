@@ -1,6 +1,7 @@
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.crud.employee import create, get_by_name, get_all, delete_all, get_by_name_fragment
+from api.crud.employee import create, get_by_name, get_all, delete_all, get_by_name_fragment, EmployeeError
 
 
 async def test_create_employee(db_session: AsyncSession, employee_data):
@@ -49,3 +50,14 @@ async def test_get_by_name_fragment(db_session: AsyncSession, employee_data):
     retrieved_employee = await get_by_name_fragment(db_session, fragment)
     assert retrieved_employee is not None
     assert retrieved_employee.full_name == employee_data["full_name"]
+
+
+async def test_get_by_name_fragment_raises_on_ambiguous_match(db_session: AsyncSession, employee_data):
+    """Если по фрагменту имени найдено больше одного сотрудника – поднимается исключение EmployeeError."""
+    await create(db_session, **employee_data)
+    second_employee_data = {**employee_data, "full_name": "Иванов Петр Петрович"}
+    await create(db_session, **second_employee_data)
+
+    fragment = employee_data["full_name"].split()[0]  # Берём первую часть ФИО как фрагмент – "Иванов"
+    with pytest.raises(EmployeeError):
+        await get_by_name_fragment(db_session, fragment)
