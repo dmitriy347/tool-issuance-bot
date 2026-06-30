@@ -3,6 +3,9 @@ import json
 import httpx
 from os import getenv
 
+from pydantic import ValidationError
+from tenacity import retry, stop_after_attempt, retry_if_exception_type
+
 from api.schemas.ai_extraction import ExtractedNames
 
 text = (
@@ -18,6 +21,12 @@ text = (
 url = "https://api.groq.com/openai/v1/chat/completions"
 model = "qwen/qwen3.6-27b"
 
+
+@retry(
+    stop=stop_after_attempt(2),
+    retry=retry_if_exception_type((ValidationError, json.JSONDecodeError)),
+    reraise=True,
+)
 async def extract_employee_names(image_bytes: bytes) -> ExtractedNames:
     """
     Отправляет изображение и текстовый запрос в модель для извлечения фамилии сотрудника из поля "Комментарий".
